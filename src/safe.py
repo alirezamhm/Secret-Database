@@ -59,11 +59,28 @@ if hashlib.md5(psw.encode('ASCII')).hexdigest() == hashed_psw:
                 print('This file does not exist')
                 continue
 
-            db_conn.execute('''INSERT INTO safe (FULL_NAME, NAME, EXTENSION, DATA)
+            try:
+                db_conn.execute('''INSERT INTO safe (FULL_NAME, NAME, EXTENSION, DATA)
                                 VALUES ("{}", "{}", "{}", "{}");'''.format(full_name, name, extension, data))
-            db_conn.commit()
+                db_conn.commit()
+            except sqlite3.IntegrityError:
+                print("There is a file with this name in database already")
+                continue
         elif command == 'o':
-            pass
+            name = input("Enter name of the file that you want to open (example: sample.txt) \n> ")
+            if '.' not in name:
+                print("invalid file name")
+                continue
+            result = db_conn.execute('SELECT data FROM safe WHERE full_name = "{}"'.format(name)).fetchall()
+
+            if not result:
+                print("File not found in database")
+                continue
+            data = result[0][0]
+            with open(name, 'wb') as f:
+                f.write(base64.b64decode(data.encode()))
+            print("your file has been created in the script directory")
+
         else:
             print("Invalid command")
     db_conn.close()
